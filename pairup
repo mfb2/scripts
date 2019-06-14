@@ -1,0 +1,36 @@
+#!/bin/bash
+
+###############################################################################
+#
+# pairup
+#   tmux pairing setup script
+#
+# Prerequisites:
+#   tmux
+#   ngrok
+#
+# Notes:
+# 	Before running this command, you'll need to add the public keys of the users
+# 	you'd like to have connect to your session.
+# 	For convenience, github public keys are a great way to go.
+# 	It can be accessed via https://api.github.com/users/$username/keys
+#
+#   example ~/.ssh/authorized_keys entry:
+#     command="/usr/local/bin/tmux new-session -t pairing -s $@-session" ssh-rsa <key goes here> https://github.com/username
+#
+# Limitations:
+#   Currently the script does not clean up the /tmp file.  That shoudl be fixed.
+#
+###############################################################################
+
+tmux_user=${TMUX_USER:-$USER}
+ngrok_host=${NGROK_HOST:-0.tcp.ngrok.io}
+
+tmux new-session -d -s pairing "ngrok tcp --log /tmp/ngrok.log 22"
+tmux split-window
+sleep 1
+
+ngrok_port=$(grep 'tcp://' /tmp/ngrok.log | tail -1 | awk -F':' '{ print $NF }')
+ssh_command="ssh -p $ngrok_port $tmux_user@$ngrok_host"
+
+tmux send-keys "$ssh_command" C-m
